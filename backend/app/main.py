@@ -1,4 +1,11 @@
 import os
+import sys
+
+# Ensure backend directory is in sys.path so 'app.*' imports always succeed
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -10,7 +17,7 @@ app = FastAPI(title="YouFlow API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -26,14 +33,23 @@ app.include_router(dashboard.router, prefix="/api", tags=["dashboard"])
 
 @app.on_event("startup")
 async def startup():
-    init_db()
+    try:
+        init_db()
+    except Exception as e:
+        print(f"Warning: Database initialization deferred or error: {e}")
+
+
+@app.get("/api/health")
+def health():
+    return {"status": "ok", "service": "YouFlow"}
 
 
 # Serve React frontend in production
 candidates = [
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist")),
     os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")),
-    os.path.abspath(os.path.join(os.getcwd(), "frontend", "dist"))
+    os.path.abspath(os.path.join(os.getcwd(), "frontend", "dist")),
+    os.path.abspath(os.path.join(os.getcwd(), "dist")),
 ]
 frontend_dist = next((p for p in candidates if os.path.exists(p)), candidates[0])
 

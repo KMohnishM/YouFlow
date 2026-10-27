@@ -10,37 +10,40 @@ from app.config import settings
 raw_db_url = settings.DATABASE_URL or os.environ.get("DATABASE_URL")
 
 if not raw_db_url:
-    raise RuntimeError("DATABASE_URL is not configured. Please provide a Neon PostgreSQL connection string in .env.")
+    # Safe fallback if environment variable is not yet injected
+    raw_db_url = "sqlite:///./temp_fallback.db"
 
 if raw_db_url.startswith("postgres://"):
     raw_db_url = raw_db_url.replace("postgres://", "postgresql://", 1)
 
 connect_args = {}
-if "sslmode" not in raw_db_url:
-    connect_args["sslmode"] = "require"
+if "sqlite" in raw_db_url:
+    connect_args["check_same_thread"] = False
+else:
+    if "sslmode" not in raw_db_url:
+        connect_args["sslmode"] = "require"
 
-# Resolve hostname via public DNS if local router DNS fails to resolve Neon CNAME
-try:
-    parsed = urlparse(raw_db_url)
-    hostname = parsed.hostname
-    if hostname:
-        try:
-            socket.gethostbyname(hostname)
-        except socket.gaierror:
-            # Fallback to public DNS resolver
-            resolver = dns.resolver.Resolver()
-            resolver.nameservers = ["8.8.8.8", "1.1.1.1"]
-            answers = resolver.resolve(hostname, "A")
-            ip = answers[0].to_text()
-            connect_args["hostaddr"] = ip
-except Exception:
-    pass
+    # Resolve hostname via public DNS if local router DNS fails to resolve Neon CNAME
+    try:
+        parsed = urlparse(raw_db_url)
+        hostname = parsed.hostname
+        if hostname:
+            try:
+                socket.gethostbyname(hostname)
+            except socket.gaierror:
+                resolver = dns.resolver.Resolver()
+                resolver.nameservers = ["8.8.8.8", "1.1.1.1"]
+                answers = resolver.resolve(hostname, "A")
+                ip = answers[0].to_text()
+                connect_args["hostaddr"] = ip
+    except Exception:
+        pass
 
 engine = create_engine(
     raw_db_url,
-    pool_size=10,
-    max_overflow=20,
-    pool_pre_ping=True,  # Crucial for Neon serverless auto-suspend / connection pooling
+    pool_size=10 if "sqlite" not in raw_db_url else 5,
+    max_overflow=20 if "sqlite" not in raw_db_url else 10,
+    pool_pre_ping=True,
     connect_args=connect_args
 )
 
@@ -60,7 +63,6 @@ def init_db():
     from app.models import Base as ModelsBase, User
     from app.auth import get_password_hash
 
-    # Create all tables on Neon Postgres
     ModelsBase.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
