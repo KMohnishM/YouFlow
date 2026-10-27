@@ -39,7 +39,7 @@ async def startup():
         print(f"Warning: Database initialization deferred or error: {e}")
 
 
-@app.get("/api/health")
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 def health():
     return {"status": "ok", "service": "YouFlow"}
 
@@ -58,7 +58,7 @@ if os.path.exists(frontend_dist):
     if os.path.exists(assets_path):
         app.mount("/assets", StaticFiles(directory=assets_path), name="assets")
 
-    @app.get("/{full_path:path}")
+    @app.api_route("/{full_path:path}", methods=["GET", "HEAD"])
     async def serve_spa(full_path: str):
         file_path = os.path.join(frontend_dist, full_path)
         if full_path and os.path.isfile(file_path):
