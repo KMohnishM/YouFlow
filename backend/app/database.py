@@ -1,7 +1,6 @@
 import os
 import socket
 from urllib.parse import urlparse
-import dns.resolver
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -10,7 +9,6 @@ from app.config import settings
 raw_db_url = settings.DATABASE_URL or os.environ.get("DATABASE_URL")
 
 if not raw_db_url:
-    # Safe fallback if environment variable is not yet injected
     raw_db_url = "sqlite:///./temp_fallback.db"
 
 if raw_db_url.startswith("postgres://"):
@@ -31,11 +29,15 @@ else:
             try:
                 socket.gethostbyname(hostname)
             except socket.gaierror:
-                resolver = dns.resolver.Resolver()
-                resolver.nameservers = ["8.8.8.8", "1.1.1.1"]
-                answers = resolver.resolve(hostname, "A")
-                ip = answers[0].to_text()
-                connect_args["hostaddr"] = ip
+                try:
+                    import dns.resolver
+                    res = dns.resolver.Resolver()
+                    res.nameservers = ["8.8.8.8", "1.1.1.1"]
+                    answers = res.resolve(hostname, "A")
+                    ip = answers[0].to_text()
+                    connect_args["hostaddr"] = ip
+                except Exception:
+                    pass
     except Exception:
         pass
 

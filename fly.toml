@@ -2,6 +2,7 @@ app = 'youflow'
 primary_region = 'sin'
 
 [build]
+  dockerfile = 'Dockerfile.docker'
 
 [env]
   DB_PATH = '/data/finance.db'
