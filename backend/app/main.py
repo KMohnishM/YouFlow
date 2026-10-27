@@ -30,13 +30,6 @@ app.include_router(mf.router, prefix="/api/mf", tags=["mutual-funds"])
 app.include_router(fd.router, prefix="/api/fd", tags=["fds"])
 app.include_router(dashboard.router, prefix="/api", tags=["dashboard"])
 
-app.include_router(auth.router, prefix="/auth", tags=["auth-root"])
-app.include_router(expenses.router, prefix="/expenses", tags=["expenses-root"])
-app.include_router(stocks.router, prefix="/stocks", tags=["stocks-root"])
-app.include_router(mf.router, prefix="/mf", tags=["mutual-funds-root"])
-app.include_router(fd.router, prefix="/fd", tags=["fds-root"])
-app.include_router(dashboard.router, prefix="", tags=["dashboard-root"])
-
 
 @app.on_event("startup")
 async def startup():
