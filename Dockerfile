@@ -24,7 +24,6 @@ COPY backend/ ./backend/
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
 ENV PYTHONPATH=/app/backend
-ENV PORT=8000
-EXPOSE 8000
+EXPOSE 80 8000 8080 3000
 
-CMD ["sh", "-c", "python -m uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "python -m uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-80}"]
